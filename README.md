@@ -9,6 +9,7 @@
 
 ## Modes:
 Press 'm' to toggle between different modes:
+
     - 0: 1st Person Mode
     - 1: Orhogonal Mverhead View
     - 2: Perspective Overhead View
