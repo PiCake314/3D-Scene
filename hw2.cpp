@@ -5,10 +5,19 @@
 double xTh = 24;
 double yTh = 12;
 
-
 double xShift = -.06f;
 double yShift = -6.4;
 double zShift = -18.8;
+
+
+// values to hold the original values while in ortho/presp mode.
+double xTh_hold = xTh;
+double yTh_hold = yTh;
+
+double xShift_hold = xShift;
+double yShift_hold = yShift;
+double zShift_hold = zShift;
+
 
 bool moving_forward = false;
 bool moving_backward = false;
@@ -34,14 +43,20 @@ const int rot_speed = 1;
 const float X_OVERHEAD_ORTHO = -3.0f;
 const float Y_OVERHEAD_ORTHO = 0;
 const float Z_OVERHEAD_ORTHO = -4.0f;
-const float xTH_OVERHEAD_ORTHO = 90.0f;
+const float xTH_OVERHEAD_ORTHO = 35.0f;
 const float yTH_OVERHEAD_ORTHO = 90.0f;
 
-const float X_OVERHEAD_PRESP = -3.0f;
-const float Y_OVERHEAD_PRESP = -15;
-const float Z_OVERHEAD_PRESP = -3.0f;
-const float xTH_OVERHEAD_PRESP = 90.0f;
-const float yTH_OVERHEAD_PRESP = 90.0f;
+const float X_OVERHEAD = 11.0f;
+const float Y_OVERHEAD = -10;
+const float Z_OVERHEAD = -4.0f;
+const float xTH_OVERHEAD = 35.0f;
+const float yTH_OVERHEAD = 90.0f;
+
+float viewing_radius = 10.0f;
+float viewing_angle = 0.0f;
+
+const float x_center = 3.0f, y_center = 0.5f, z_center = 4.25f;
+
 
 int width_ = 600;
 int height_ = 600;
@@ -139,7 +154,7 @@ void setupProjection()
     if (mode == ORTHO)
     {
       //  Orthogonal projection
-      const double dim = 5;
+      const double dim = 9;
       double asp = (height_>0) ? (double)width_/height_ : 1;
       glOrtho(-asp*dim,+asp*dim, -dim, +dim, -dim, +dim);
     }
@@ -173,26 +188,46 @@ void display(){
    glTranslatef(xShift, yShift, zShift);
 
    
-   switch (mode){
-      case PERSP:
-         xShift = X_OVERHEAD_PRESP;
-         yShift = Y_OVERHEAD_PRESP;
-         zShift = Z_OVERHEAD_PRESP;
-         xTh = xTH_OVERHEAD_PRESP;
-         yTh = yTH_OVERHEAD_PRESP;
-
-         break;
-
+   switch(mode){
       case ORTHO:
+
          xShift = X_OVERHEAD_ORTHO;
          yShift = Y_OVERHEAD_ORTHO;
          zShift = Z_OVERHEAD_ORTHO;
          xTh = xTH_OVERHEAD_ORTHO;
          yTh = yTH_OVERHEAD_ORTHO;
 
+         glTranslatef(x_center, y_center, z_center);
+         glRotatef(viewing_angle, 0, 1, 0);
+         glTranslatef(-x_center, -y_center, -z_center);
+
+         break;
+      case PERSP:
+         xShift = X_OVERHEAD;
+         yShift = Y_OVERHEAD;
+         zShift = Z_OVERHEAD;
+         xTh = xTH_OVERHEAD;
+         yTh = yTH_OVERHEAD;
+
+         glTranslatef(x_center, y_center, z_center);
+         glRotatef(viewing_angle, 0, 1, 0);
+         glTranslatef(-x_center, -y_center, -z_center);
+
+         break;
+      
+      case FREE:
+         xTh_hold = xTh;
+         yTh_hold = yTh;
+         xShift_hold = xShift;
+         yShift_hold = yShift;
+         zShift_hold = zShift;
          break;
    }
 
+
+   // glTranslatef(3.0f, 0.5f, 4.25f);
+   // drawAxis(1);
+   // glTranslatef(-3.0f, -0.5f, -4.25f);
 
    for(int i = 0; i < 4; i++){
       for(int j = 0; j < 5; j++){
@@ -217,10 +252,6 @@ void display(){
    board();
 
 
-
-   // drawAxis(1);
-
-
    glRotatef(xTh, 1, 0, 0);
    glRotatef(yTh, 0, 1, 0);
 
@@ -228,7 +259,11 @@ void display(){
    // -----------------------
    //  Five pixels from the lower left corner of the window
    glWindowPos2i(5,5);
-   Print("X: %g, Y: %g, Z: %g, xTh: %g, yTh: %g, MODE: %s (%d)", xShift, yShift, zShift, xTh, yTh, modeText(), mode);
+   Print(
+      "X: %g, Y: %g, Z: %g, xTh: %g, yTh: %g, MODE: %s (%d), ROT: %g", 
+      xShift, yShift, zShift, xTh, yTh,
+      modeText(), mode, viewing_angle
+   );
 
 
    //  Render the scene
@@ -254,18 +289,7 @@ void reshape(int width,int height)
    //  Set projection to identity
    glLoadIdentity();
 
-
-   if(mode == ORTHO){
-      //  Orthogonal projection
-      const double dim = 5;
-      double asp = (height_>0) ? (double)width_/height_ : 1;
-      glOrtho(-asp*dim,+asp*dim, -dim, +dim, -dim, +dim);
-   }
-   else{
-      // Apply perspective projection
-      double aspectRatio = (double)width_ / height_;
-      gluPerspective(45, aspectRatio, 0.1, 100);
-   }
+   setupProjection();
 
 
    //  Select model view matrix
@@ -279,7 +303,7 @@ void reshape(int width,int height)
  */
 void special(int key,int x,int y){
 
-   switch (key){
+   if(mode == FREE) switch (key){
       case GLUT_KEY_RIGHT: // Right arrow - increase rotation by 5 degree
          rotating_right = true;
          break;
@@ -290,13 +314,22 @@ void special(int key,int x,int y){
    
       case GLUT_KEY_UP: // Up arrow - decrease rotation by 5 degree
          rotating_up = true;
-         xTh -= rot_speed;
          break;
    
       case GLUT_KEY_DOWN: // Down arrow - increases rotation by 5 degree
          rotating_down = true;
-         xTh += rot_speed;
          break;
+   }
+
+   else switch (key){
+      case GLUT_KEY_RIGHT:
+         viewing_angle -= 5;
+         break;
+
+      case GLUT_KEY_LEFT:
+         viewing_angle += 5;
+         break;
+      
    }
 
 
@@ -307,7 +340,7 @@ void special(int key,int x,int y){
 
 void specialUp(int key,int x,int y){
 
-   switch (key){
+   switch(key){
       case GLUT_KEY_RIGHT: // Right arrow - increase rotation by 5 degree
          rotating_right = false;
          break;
@@ -318,12 +351,10 @@ void specialUp(int key,int x,int y){
    
       case GLUT_KEY_UP: // Up arrow - decrease rotation by 5 degree
          rotating_up = false;
-         xTh -= rot_speed;
          break;
    
       case GLUT_KEY_DOWN: // Down arrow - increases rotation by 5 degree
          rotating_down = false;
-         xTh += rot_speed;
          break;
    }
 
@@ -334,7 +365,7 @@ void specialUp(int key,int x,int y){
 
 
 void keyboard(unsigned char ch,int x,int y){
-   if(mode == FREE){
+   if(mode == FREE)
       switch (ch){
          case 27:   // Exit on ESC
             exit(0);
@@ -372,9 +403,7 @@ void keyboard(unsigned char ch,int x,int y){
             xTh = yTh = xShift = yShift = zShift = 0;
             break;
       }
-   }
-   else{
-      switch (ch){
+   else switch (ch){
          case 27:
             exit(0);
             break;
@@ -382,15 +411,13 @@ void keyboard(unsigned char ch,int x,int y){
          case 'm':
             mode = (mode + 1) % 3;
             if(mode == FREE){
-               xShift = X_OVERHEAD_PRESP;
-               yShift = Y_OVERHEAD_PRESP;
-               zShift = Z_OVERHEAD_PRESP;
-               xTh = xTH_OVERHEAD_PRESP;
-               yTh = yTH_OVERHEAD_PRESP;
+               xShift = xShift_hold;
+               yShift = yShift_hold;
+               zShift = zShift_hold;
+               xTh = xTh_hold;
+               yTh = yTh_hold;
             }
-            break;
       }
-   }
 
    //  Request display update
    glutPostRedisplay();

@@ -10,16 +10,20 @@
 ## Modes:
 Press 'm' to toggle between different modes:
 
-    - 0: 1st Person Mode
-    - 1: Orhogonal Mverhead View
-    - 2: Perspective Overhead View
+ - 0: 1st Person Mode
+ - 1: Orhogonal Mverhead View
+  - 2: Perspective Overhead View
 
 ## Controls for 1st Person Mode:
 1. (w, a, s, d) for moving the player (yourself) forward, left, backwards, right.
 1. Press the spacebar to move up, and (`) to move down.
 1. Left, right, up, and down arrows control the player's rotation.
 
+## Controls for Overhead View:
+
+- Press left or right arrow keys to change the angle of view.
+
 
 
 ---
-- Time spent: 12 hours ;-;.
+- Time spent: 15 hours ;-;.
